@@ -1,30 +1,54 @@
 package ui
 
 import (
+	"image/color"
 	"strconv"
 	"time"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
+	"BPlogger/bp"
 	"BPlogger/db"
 )
+
+// classifiedField wraps an entry with a colored border rectangle and a label
+// showing the current BP classification. Both update via OnChanged.
+func classifiedField(entry *widget.Entry, classify func(int) bp.Classification) (
+	field fyne.CanvasObject,
+	borderRect *canvas.Rectangle,
+	classLabel *widget.Label,
+) {
+	borderRect = canvas.NewRectangle(color.Transparent)
+	// Stack: colored rect fills the full area, padded entry sits on top —
+	// the 4 dp gap between them renders as a colored border.
+	field = container.NewStack(borderRect, container.NewPadded(entry))
+	classLabel = widget.NewLabel("")
+
+	entry.OnChanged = func(s string) {
+		val, _ := strconv.Atoi(s)
+		cls := classify(val)
+		borderRect.FillColor = cls.Color
+		borderRect.Refresh()
+		classLabel.SetText(cls.Label)
+	}
+	return
+}
 
 func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 	systolicEntry := widget.NewEntry()
 	systolicEntry.SetPlaceHolder("e.g. 120")
+	sysBordered, _, sysLabel := classifiedField(systolicEntry, bp.ClassifySystolic)
 
 	diastolicEntry := widget.NewEntry()
 	diastolicEntry.SetPlaceHolder("e.g. 80")
+	diaBordered, _, diaLabel := classifiedField(diastolicEntry, bp.ClassifyDiastolic)
 
 	pulseEntry := widget.NewEntry()
 	pulseEntry.SetPlaceHolder("e.g. 72")
-
-	notesEntry := widget.NewMultiLineEntry()
-	notesEntry.SetPlaceHolder("Optional notes...")
-	notesEntry.SetMinRowsVisible(3)
 
 	availableTags := []string{"poor sleep", "stressed", "bp- meds"}
 	tagChecks := make([]*widget.Check, len(availableTags))
@@ -32,6 +56,10 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 		tagChecks[i] = widget.NewCheck(t, nil)
 	}
 	tagsRow := container.NewHBox(tagChecks[0], tagChecks[1], tagChecks[2])
+
+	notesEntry := widget.NewMultiLineEntry()
+	notesEntry.SetPlaceHolder("Optional notes...")
+	notesEntry.SetMinRowsVisible(3)
 
 	systolicEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(diastolicEntry) }
 	diastolicEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(pulseEntry) }
@@ -82,8 +110,8 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 	saveBtn.Importance = widget.HighImportance
 
 	form := widget.NewForm(
-		widget.NewFormItem("Systolic (mmHg)", systolicEntry),
-		widget.NewFormItem("Diastolic (mmHg)", diastolicEntry),
+		widget.NewFormItem("Systolic (mmHg)", container.NewBorder(nil, nil, nil, sysLabel, sysBordered)),
+		widget.NewFormItem("Diastolic (mmHg)", container.NewBorder(nil, nil, nil, diaLabel, diaBordered)),
 		widget.NewFormItem("Pulse (bpm)", pulseEntry),
 		widget.NewFormItem("Tags", tagsRow),
 		widget.NewFormItem("Notes", notesEntry),
