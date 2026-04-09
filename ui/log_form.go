@@ -50,9 +50,6 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 	pulseEntry := widget.NewEntry()
 	pulseEntry.SetPlaceHolder("e.g. 72")
 
-	// save is declared before OnSubmitted so the closure can reference it.
-	var saveBtn *widget.Button
-
 	doSave := func() {
 		sys, err1 := strconv.Atoi(systolicEntry.Text)
 		dia, err2 := strconv.Atoi(diastolicEntry.Text)
@@ -84,12 +81,12 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 		}
 	}
 
-	saveBtn = widget.NewButton("Save Reading", doSave)
+	saveBtn := widget.NewButton("Save Reading", doSave)
 	saveBtn.Importance = widget.HighImportance
 
 	systolicEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(diastolicEntry) }
 	diastolicEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(pulseEntry) }
-	pulseEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(saveBtn) }
+	pulseEntry.OnSubmitted = func(_ string) { doSave() }
 
 	form := widget.NewForm(
 		widget.NewFormItem("Systolic (mmHg)", container.NewBorder(nil, nil, nil, sysLabel, sysBordered)),
