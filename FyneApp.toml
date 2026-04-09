@@ -1,0 +1,8 @@
+Website = "https://github.com/perfossionoot/BPlogger"
+
+[Details]
+  Icon = "Icon.png"
+  Name = "BPlogger"
+  ID = "com.perfossionoot.bplogger"
+  Version = "1.0.0"
+  Build = 3
