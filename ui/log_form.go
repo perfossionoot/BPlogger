@@ -57,15 +57,10 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 	}
 	tagsRow := container.NewHBox(tagChecks[0], tagChecks[1], tagChecks[2])
 
-	notesEntry := widget.NewMultiLineEntry()
-	notesEntry.SetPlaceHolder("Optional notes...")
-	notesEntry.SetMinRowsVisible(3)
+	// save is declared before OnSubmitted so the closure can reference it.
+	var saveBtn *widget.Button
 
-	systolicEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(diastolicEntry) }
-	diastolicEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(pulseEntry) }
-	pulseEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(notesEntry) }
-
-	saveBtn := widget.NewButton("Save Reading", func() {
+	doSave := func() {
 		sys, err1 := strconv.Atoi(systolicEntry.Text)
 		dia, err2 := strconv.Atoi(diastolicEntry.Text)
 		pul, err3 := strconv.Atoi(pulseEntry.Text)
@@ -88,7 +83,6 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 			Pulse:      pul,
 			RecordedAt: time.Now(),
 			Tags:       tags,
-			Notes:      notesEntry.Text,
 		}
 		if err := db.InsertReading(r); err != nil {
 			dialog.ShowError(err, w)
@@ -101,20 +95,25 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 		for _, chk := range tagChecks {
 			chk.SetChecked(false)
 		}
-		notesEntry.SetText("")
+		w.Canvas().Focus(systolicEntry)
 
 		if onSave != nil {
 			onSave()
 		}
-	})
+	}
+
+	saveBtn = widget.NewButton("Save Reading", doSave)
 	saveBtn.Importance = widget.HighImportance
+
+	systolicEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(diastolicEntry) }
+	diastolicEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(pulseEntry) }
+	pulseEntry.OnSubmitted = func(_ string) { w.Canvas().Focus(saveBtn) }
 
 	form := widget.NewForm(
 		widget.NewFormItem("Systolic (mmHg)", container.NewBorder(nil, nil, nil, sysLabel, sysBordered)),
 		widget.NewFormItem("Diastolic (mmHg)", container.NewBorder(nil, nil, nil, diaLabel, diaBordered)),
 		widget.NewFormItem("Pulse (bpm)", pulseEntry),
 		widget.NewFormItem("Tags", tagsRow),
-		widget.NewFormItem("Notes", notesEntry),
 	)
 
 	return container.NewVBox(form, saveBtn)

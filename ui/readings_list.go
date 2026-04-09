@@ -13,6 +13,7 @@ import (
 	"BPlogger/db"
 )
 
+
 var errInvalidInput = errors.New("please enter valid positive numbers for systolic, diastolic, and pulse")
 
 func NewReadingsList(w fyne.Window) (fyne.CanvasObject, func()) {
@@ -36,14 +37,7 @@ func NewReadingsList(w fyne.Window) (fyne.CanvasObject, func()) {
 				),
 			)
 			sub := row.Objects[1].(*widget.Label)
-			var parts []string
-			if len(r.Tags) > 0 {
-				parts = append(parts, strings.Join(r.Tags, ", "))
-			}
-			if r.Notes != "" {
-				parts = append(parts, r.Notes)
-			}
-			sub.SetText(strings.Join(parts, "  |  "))
+			sub.SetText(strings.Join(r.Tags, ", "))
 			sub.Truncation = fyne.TextTruncateEllipsis
 		},
 	)
@@ -57,9 +51,9 @@ func NewReadingsList(w fyne.Window) (fyne.CanvasObject, func()) {
 			tagsStr = strings.Join(r.Tags, ", ")
 		}
 		msg := fmt.Sprintf(
-			"Date:      %s\nSystolic:  %d mmHg\nDiastolic: %d mmHg\nPulse:     %d bpm\nTags:      %s\nNotes:     %s",
+			"Date:      %s\nSystolic:  %d mmHg\nDiastolic: %d mmHg\nPulse:     %d bpm\nTags:      %s",
 			r.RecordedAt.Format("2006-01-02 15:04:05"),
-			r.Systolic, r.Diastolic, r.Pulse, tagsStr, r.Notes,
+			r.Systolic, r.Diastolic, r.Pulse, tagsStr,
 		)
 		dialog.ShowConfirm("Reading Detail", msg+"\n\nDelete this reading?",
 			func(del bool) {

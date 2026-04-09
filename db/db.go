@@ -17,7 +17,6 @@ type Reading struct {
 	Pulse      int
 	RecordedAt time.Time
 	Tags       []string
-	Notes      string
 }
 
 var DB *sql.DB
@@ -61,15 +60,15 @@ func migrate() error {
 
 func InsertReading(r Reading) error {
 	_, err := DB.Exec(
-		`INSERT INTO readings (systolic, diastolic, pulse, recorded_at, tags, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO readings (systolic, diastolic, pulse, recorded_at, tags) VALUES (?, ?, ?, ?, ?)`,
 		r.Systolic, r.Diastolic, r.Pulse, r.RecordedAt.Format(time.RFC3339),
-		strings.Join(r.Tags, ","), r.Notes,
+		strings.Join(r.Tags, ","),
 	)
 	return err
 }
 
 func GetReadings() ([]Reading, error) {
-	rows, err := DB.Query(`SELECT id, systolic, diastolic, pulse, recorded_at, tags, notes FROM readings ORDER BY recorded_at DESC`)
+	rows, err := DB.Query(`SELECT id, systolic, diastolic, pulse, recorded_at, tags FROM readings ORDER BY recorded_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +78,7 @@ func GetReadings() ([]Reading, error) {
 	for rows.Next() {
 		var r Reading
 		var ts, tags string
-		if err := rows.Scan(&r.ID, &r.Systolic, &r.Diastolic, &r.Pulse, &ts, &tags, &r.Notes); err != nil {
+		if err := rows.Scan(&r.ID, &r.Systolic, &r.Diastolic, &r.Pulse, &ts, &tags); err != nil {
 			return nil, err
 		}
 		r.RecordedAt, _ = time.Parse(time.RFC3339, ts)
