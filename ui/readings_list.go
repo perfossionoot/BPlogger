@@ -3,11 +3,15 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"image/color"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
+	"BPlogger/bp"
 	"BPlogger/db"
 )
 
@@ -19,16 +23,30 @@ func NewReadingsList(w fyne.Window) (fyne.CanvasObject, func()) {
 	list := widget.NewList(
 		func() int { return len(readings) },
 		func() fyne.CanvasObject {
-			return widget.NewLabel("")
+			return container.NewStack(
+				canvas.NewRectangle(color.Transparent),
+				widget.NewLabel(""),
+			)
 		},
 		func(id widget.ListItemID, obj fyne.CanvasObject) {
 			r := readings[id]
-			obj.(*widget.Label).SetText(
-				fmt.Sprintf("%s  —  %d/%d mmHg  ❤ %d bpm",
-					r.RecordedAt.Format("2006-01-02 15:04"),
-					r.Systolic, r.Diastolic, r.Pulse,
-				),
-			)
+			stack := obj.(*fyne.Container)
+			rect := stack.Objects[0].(*canvas.Rectangle)
+			label := stack.Objects[1].(*widget.Label)
+
+			cls := bp.ClassifyReading(r.Systolic, r.Diastolic)
+			c := cls.Color
+			if c.A > 0 {
+				rect.FillColor = color.RGBA{R: c.R, G: c.G, B: c.B, A: 80}
+			} else {
+				rect.FillColor = color.Transparent
+			}
+			rect.Refresh()
+
+			label.SetText(fmt.Sprintf("%s  —  %d/%d mmHg  ❤ %d bpm",
+				r.RecordedAt.Format("2006-01-02 15:04"),
+				r.Systolic, r.Diastolic, r.Pulse,
+			))
 		},
 	)
 
@@ -36,10 +54,11 @@ func NewReadingsList(w fyne.Window) (fyne.CanvasObject, func()) {
 
 	list.OnSelected = func(id widget.ListItemID) {
 		r := readings[id]
+		cls := bp.ClassifyReading(r.Systolic, r.Diastolic)
 		msg := fmt.Sprintf(
-			"Date:      %s\nSystolic:  %d mmHg\nDiastolic: %d mmHg\nPulse:     %d bpm",
+			"Date:      %s\nSystolic:  %d mmHg\nDiastolic: %d mmHg\nPulse:     %d bpm\nCategory:  %s",
 			r.RecordedAt.Format("2006-01-02 15:04:05"),
-			r.Systolic, r.Diastolic, r.Pulse,
+			r.Systolic, r.Diastolic, r.Pulse, cls.Label,
 		)
 		dialog.ShowConfirm("Reading Detail", msg+"\n\nDelete this reading?",
 			func(del bool) {

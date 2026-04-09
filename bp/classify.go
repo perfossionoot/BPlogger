@@ -65,3 +65,31 @@ func ClassifyDiastolic(v int) Classification {
 		return clsCrisis
 	}
 }
+
+// ClassifyReading returns the overall classification for a combined reading,
+// using the more severe of the systolic and diastolic classifications.
+func ClassifyReading(systolic, diastolic int) Classification {
+	sys := ClassifySystolic(systolic)
+	dia := ClassifyDiastolic(diastolic)
+	if severityOf(sys) >= severityOf(dia) {
+		return sys
+	}
+	return dia
+}
+
+func severityOf(c Classification) int {
+	switch c {
+	case clsCrisis:
+		return 5
+	case clsStage2:
+		return 4
+	case clsStage1:
+		return 3
+	case clsElevated:
+		return 2
+	case clsNormal:
+		return 1
+	default:
+		return 0
+	}
+}
