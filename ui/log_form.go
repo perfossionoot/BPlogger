@@ -50,13 +50,6 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 	pulseEntry := widget.NewEntry()
 	pulseEntry.SetPlaceHolder("e.g. 72")
 
-	availableTags := []string{"poor sleep", "stressed", "bp- meds"}
-	tagChecks := make([]*widget.Check, len(availableTags))
-	for i, t := range availableTags {
-		tagChecks[i] = widget.NewCheck(t, nil)
-	}
-	tagsRow := container.NewHBox(tagChecks[0], tagChecks[1], tagChecks[2])
-
 	// save is declared before OnSubmitted so the closure can reference it.
 	var saveBtn *widget.Button
 
@@ -70,19 +63,11 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 			return
 		}
 
-		var tags []string
-		for i, chk := range tagChecks {
-			if chk.Checked {
-				tags = append(tags, availableTags[i])
-			}
-		}
-
 		r := db.Reading{
 			Systolic:   sys,
 			Diastolic:  dia,
 			Pulse:      pul,
 			RecordedAt: time.Now(),
-			Tags:       tags,
 		}
 		if err := db.InsertReading(r); err != nil {
 			dialog.ShowError(err, w)
@@ -92,9 +77,6 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 		systolicEntry.SetText("")
 		diastolicEntry.SetText("")
 		pulseEntry.SetText("")
-		for _, chk := range tagChecks {
-			chk.SetChecked(false)
-		}
 		w.Canvas().Focus(systolicEntry)
 
 		if onSave != nil {
@@ -113,7 +95,6 @@ func NewLogForm(w fyne.Window, onSave func()) fyne.CanvasObject {
 		widget.NewFormItem("Systolic (mmHg)", container.NewBorder(nil, nil, nil, sysLabel, sysBordered)),
 		widget.NewFormItem("Diastolic (mmHg)", container.NewBorder(nil, nil, nil, diaLabel, diaBordered)),
 		widget.NewFormItem("Pulse (bpm)", pulseEntry),
-		widget.NewFormItem("Tags", tagsRow),
 	)
 
 	return container.NewVBox(form, saveBtn)

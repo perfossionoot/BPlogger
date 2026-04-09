@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -16,7 +15,6 @@ type Reading struct {
 	Diastolic  int
 	Pulse      int
 	RecordedAt time.Time
-	Tags       []string
 }
 
 var DB *sql.DB
@@ -60,15 +58,14 @@ func migrate() error {
 
 func InsertReading(r Reading) error {
 	_, err := DB.Exec(
-		`INSERT INTO readings (systolic, diastolic, pulse, recorded_at, tags) VALUES (?, ?, ?, ?, ?)`,
+		`INSERT INTO readings (systolic, diastolic, pulse, recorded_at) VALUES (?, ?, ?, ?)`,
 		r.Systolic, r.Diastolic, r.Pulse, r.RecordedAt.Format(time.RFC3339),
-		strings.Join(r.Tags, ","),
 	)
 	return err
 }
 
 func GetReadings() ([]Reading, error) {
-	rows, err := DB.Query(`SELECT id, systolic, diastolic, pulse, recorded_at, tags FROM readings ORDER BY recorded_at DESC`)
+	rows, err := DB.Query(`SELECT id, systolic, diastolic, pulse, recorded_at FROM readings ORDER BY recorded_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -77,14 +74,11 @@ func GetReadings() ([]Reading, error) {
 	var readings []Reading
 	for rows.Next() {
 		var r Reading
-		var ts, tags string
-		if err := rows.Scan(&r.ID, &r.Systolic, &r.Diastolic, &r.Pulse, &ts, &tags); err != nil {
+		var ts string
+		if err := rows.Scan(&r.ID, &r.Systolic, &r.Diastolic, &r.Pulse, &ts); err != nil {
 			return nil, err
 		}
 		r.RecordedAt, _ = time.Parse(time.RFC3339, ts)
-		if tags != "" {
-			r.Tags = strings.Split(tags, ",")
-		}
 		readings = append(readings, r)
 	}
 	return readings, rows.Err()
