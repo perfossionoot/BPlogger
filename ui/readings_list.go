@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -34,9 +35,16 @@ func NewReadingsList(w fyne.Window) (fyne.CanvasObject, func()) {
 					r.Systolic, r.Diastolic, r.Pulse,
 				),
 			)
-			notes := row.Objects[1].(*widget.Label)
-			notes.SetText(r.Notes)
-			notes.Truncation = fyne.TextTruncateEllipsis
+			sub := row.Objects[1].(*widget.Label)
+			var parts []string
+			if len(r.Tags) > 0 {
+				parts = append(parts, strings.Join(r.Tags, ", "))
+			}
+			if r.Notes != "" {
+				parts = append(parts, r.Notes)
+			}
+			sub.SetText(strings.Join(parts, "  |  "))
+			sub.Truncation = fyne.TextTruncateEllipsis
 		},
 	)
 
@@ -44,10 +52,14 @@ func NewReadingsList(w fyne.Window) (fyne.CanvasObject, func()) {
 
 	list.OnSelected = func(id widget.ListItemID) {
 		r := readings[id]
+		tagsStr := "—"
+		if len(r.Tags) > 0 {
+			tagsStr = strings.Join(r.Tags, ", ")
+		}
 		msg := fmt.Sprintf(
-			"Date:      %s\nSystolic:  %d mmHg\nDiastolic: %d mmHg\nPulse:     %d bpm\nNotes:     %s",
+			"Date:      %s\nSystolic:  %d mmHg\nDiastolic: %d mmHg\nPulse:     %d bpm\nTags:      %s\nNotes:     %s",
 			r.RecordedAt.Format("2006-01-02 15:04:05"),
-			r.Systolic, r.Diastolic, r.Pulse, r.Notes,
+			r.Systolic, r.Diastolic, r.Pulse, tagsStr, r.Notes,
 		)
 		dialog.ShowConfirm("Reading Detail", msg+"\n\nDelete this reading?",
 			func(del bool) {

@@ -4,18 +4,20 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
 
 type Reading struct {
-	ID        int64
-	Systolic  int
-	Diastolic int
-	Pulse     int
+	ID         int64
+	Systolic   int
+	Diastolic  int
+	Pulse      int
 	RecordedAt time.Time
-	Notes     string
+	Tags       []string
+	Notes      string
 }
 
 var DB *sql.DB
@@ -46,21 +48,28 @@ func migrate() error {
 		diastolic   INTEGER NOT NULL,
 		pulse       INTEGER NOT NULL,
 		recorded_at TEXT    NOT NULL,
+		tags        TEXT    NOT NULL DEFAULT '',
 		notes       TEXT
 	)`)
-	return err
+	if err != nil {
+		return err
+	}
+	// add tags column to existing databases that predate this field
+	_, _ = DB.Exec(`ALTER TABLE readings ADD COLUMN tags TEXT NOT NULL DEFAULT ''`)
+	return nil
 }
 
 func InsertReading(r Reading) error {
 	_, err := DB.Exec(
-		`INSERT INTO readings (systolic, diastolic, pulse, recorded_at, notes) VALUES (?, ?, ?, ?, ?)`,
-		r.Systolic, r.Diastolic, r.Pulse, r.RecordedAt.Format(time.RFC3339), r.Notes,
+		`INSERT INTO readings (systolic, diastolic, pulse, recorded_at, tags, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+		r.Systolic, r.Diastolic, r.Pulse, r.RecordedAt.Format(time.RFC3339),
+		strings.Join(r.Tags, ","), r.Notes,
 	)
 	return err
 }
 
 func GetReadings() ([]Reading, error) {
-	rows, err := DB.Query(`SELECT id, systolic, diastolic, pulse, recorded_at, notes FROM readings ORDER BY recorded_at DESC`)
+	rows, err := DB.Query(`SELECT id, systolic, diastolic, pulse, recorded_at, tags, notes FROM readings ORDER BY recorded_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -69,11 +78,14 @@ func GetReadings() ([]Reading, error) {
 	var readings []Reading
 	for rows.Next() {
 		var r Reading
-		var ts string
-		if err := rows.Scan(&r.ID, &r.Systolic, &r.Diastolic, &r.Pulse, &ts, &r.Notes); err != nil {
+		var ts, tags string
+		if err := rows.Scan(&r.ID, &r.Systolic, &r.Diastolic, &r.Pulse, &ts, &tags, &r.Notes); err != nil {
 			return nil, err
 		}
 		r.RecordedAt, _ = time.Parse(time.RFC3339, ts)
+		if tags != "" {
+			r.Tags = strings.Split(tags, ",")
+		}
 		readings = append(readings, r)
 	}
 	return readings, rows.Err()
