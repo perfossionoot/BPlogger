@@ -19,14 +19,30 @@ func main() {
 
 	a := app.New()
 	w := a.NewWindow("BPlogger")
-	w.Resize(fyne.NewSize(640, 600))
+	w.Resize(fyne.NewSize(640, 640))
 
-	list, refresh := ui.NewReadingsList(w)
-	form := ui.NewLogForm(w, refresh)
+	trendsContent, updateTrends := ui.NewTrendsTab()
+
+	reloadTrends := func() {
+		readings, _ := db.GetReadings()
+		updateTrends(readings)
+	}
+
+	list, listRefresh := ui.NewReadingsList(w)
+
+	onSave := func() {
+		listRefresh()
+		reloadTrends()
+	}
+
+	form := ui.NewLogForm(w, onSave)
+
+	reloadTrends() // initial chart load
 
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Log Reading", form),
 		container.NewTabItem("History", list),
+		container.NewTabItem("Trends", trendsContent),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 
